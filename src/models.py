@@ -11,6 +11,9 @@ class Tournament(db.Model, SerializerMixin):
     name = db.Column(db.String)
     host = db.Column(db.String)
     url = db.Column(db.String)
+    rounds = db.Column(db.Integer)
+
+    serialize_rules = ('-Entrant.tournament_info',)
     
 
 class User(db.Model,SerializerMixin):
@@ -18,7 +21,10 @@ class User(db.Model,SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     discord_id = db.Column(db.BigInteger)
-    
+    Konami_id = db.Column(db.BigInteger)
+
+    #serializer rules
+    serialize_rules = ('-Entrant.user_info',)
 
 class Entrant(db.Model,SerializerMixin):
     __tablename__ = 'Entrants'
@@ -26,5 +32,14 @@ class Entrant(db.Model,SerializerMixin):
     rank = db.Column(db.Integer)
 
     #foreign_keys
-    tournament = db.Column(db.Integer, db.ForeignKey('Tournaments.id'))
-    user = db.Column(db.Integer, db.ForeignKey('Users.id'))
+    tournament_id = db.Column(db.Integer, db.ForeignKey('Tournaments.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('Users.id'))
+    
+    #Relationships
+
+    tournament_info = db.relationship('Tournament', foreign_keys = [tournament_id], backref = 'Entrant')
+    user_info = db.relationship('User', foreign_keys=[user_id], backref = 'Entrant')
+
+    #serializer rules
+
+    serialize_rules = ('-tournament_info.Entrant','-user_info.Entrant')
