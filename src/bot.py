@@ -5,6 +5,7 @@ import time
 import random as rd
 import pickle
 from datetime import datetime
+from urllib.parse import urlencode
 
 import discord 
 from discord.ext import commands
@@ -116,7 +117,7 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
         body = []
 
         for entrant in data:
-            body.append([entrant['rank'], entrant['user_info']['name'], entrant['user_info']['Konami_id']])
+            body.append([entrant['rank'], entrant['user_info']['name'], entrant['user_info']['konami_id']])
 
         table = table2ascii(header=header,body=body)
 
@@ -131,13 +132,63 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
 
     # await interaction.response.send_message(f"{first_attachment['url']} \n added the following Date:{None} Venue:{None}")
 
-@client.tree.command(name='get_users_results')
+@client.tree.command(name='get_users_results', description='prioritizes user>konami_id>user_who put command')
 async def get_users_results(interaction:discord.Interaction, konami_id:int=None,user:str=None):
-    print(user)
 
-@client.tree.command(name='get_tournament_results')
-async def get_users_results(interaction:discord.Interaction, location:str=None,date:str=None):
+    params = {}
+
+    if user:
+        params['discord_id'] = user[2:-1]
+    elif konami_id:
+        params['konami_id'] = konami_id
+    else:
+        params['discord_id'] = interaction.user.id
+    
+    query_string = urlencode(params)
+    base_url = 'http://127.0.0.1:5557/userResults'
+
+    r = requests.get(f'{base_url}?{query_string}', timeout=30.0)
+
+    if r.ok:
+        data = r.json()
+        
+        #Get the relavent information
+        name = data['name']
+        username = None
+
+        if data['discord_id']:
+            target = await client.fetch_user(data['discord_id'])
+            username = target.name
+
+        header = ['Place', 'Host','Date','Rounds']
+        body = []
+
+        for val in data['Entrant']:
+            
+            rank = val['rank']
+            date = val['tournament_info']['date']
+            host = val['tournament_info']['host']
+            rounds = val['tournament_info']['rounds']
+            
+            body.append([rank,host,date,rounds])
+
+        table = table2ascii(header=header,body=body)
+
+        message = f'```Results for {name} (Discord username: {username if username else "Not-Registered"})\n{table}\n```'
+
+    elif r.status_code==404:
+        message = 'User Does not exist, double check Konami id and/or discord id'
+    else:
+        message = 'Server Error, try again'
+    
+    await interaction.response.send_message(message)
+
+@client.tree.command(name='get_tournament_results',description='displays last 10 tournament from dropdown or results for specific tournament if criteria')
+async def get_tournament_results(interaction:discord.Interaction, location:str=None,date:str=None):
     pass
     
+@client.tree.command(name='info', description='get your konami id, and name you are registered with')
+async def info(interaction:discord.Interaction):
+    pass
 
 client.run(os.getenv('Disc_Token'))

@@ -14,14 +14,17 @@ class Tournament(db.Model, SerializerMixin):
     rounds = db.Column(db.Integer)
 
     serialize_rules = ('-Entrant.tournament_info',)
+
+    host_list = ['Gaming Universe',"Gamer's Choice",'Card Quest','Collectors Emporium']
     
+    #add Validation for host list
 
 class User(db.Model,SerializerMixin):
     __tablename__ = 'Users'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     discord_id = db.Column(db.BigInteger)
-    Konami_id = db.Column(db.BigInteger)
+    konami_id = db.Column(db.BigInteger)
 
     #serializer rules
     serialize_rules = ('-Entrant.user_info',)
