@@ -41,19 +41,6 @@ def add_Tournament():
 
     processedVenue = input.lower().replace(" ","")
 
-
-
-    alias_mapping = {
-        'gu' : 'Gaming  Universe',
-        'gaminguniverse' : 'Gaming Universe',
-        'gc' : "Gamer's Choice",
-        "gamerschoice" : "Gamer's Choice",
-        'cq' : 'Card Quest',
-        "cardquest" : 'Card Quest'
-    }
-
-
-
     try:
         new_Tournament = Tournament(
             date = data['date'],
@@ -146,10 +133,9 @@ def getUserResults():
 
     # user = User.query.filter(User.discord_id==discord_id).first()
     if user:
-        print(user)
         response = make_response(jsonify(user.to_dict()),200)
     else:
-        response = make_response({},404)    
+        response = make_response({},404)
     return response
 
 @app.route('/allTournaments')
@@ -160,12 +146,7 @@ def returnAllTournaments():
     if request.args.get('limit') is not None:
         limit = int(request.args.get('limit'))
 
-
     tournament_list = Tournament.query.order_by(Tournament.date.desc()).limit(limit).all()
-
-    print(Tournament.query.order_by(Tournament.date.desc()).limit(10).statement)
-    print(Tournament.query.order_by(Tournament.date.desc()).limit(None).statement)
-
     r = [tournament.to_dict() for tournament in tournament_list]
 
     response = make_response(jsonify(r),200)
@@ -175,7 +156,27 @@ def returnAllTournaments():
 def getTournamentResults():
     #There are 2 options happening. First we give you the database_id and can identify from that
     #The second option is i pass in an filter arguements, date and venue and use that to get the tournament corresponding with it, 
-    pass
+
+    filters = []
+    for key in request.args:
+        print(key,request.args[key])
+
+        filter_element = getattr(Tournament,key)==request.args[key]
+        filters.append(filter_element)
+    
+    t_list = Tournament.query.filter(*filters).all()
+    
+    t_dict = [t.to_dict() for t in t_list]
+
+    response = make_response(jsonify(t_dict),200)
+    return response
+
+@app.route('/tournamentresultsid/<int:id>')
+def getTournamentResultsbyid(id):
+
+    tournament = Tournament.query.filter(Tournament.id ==id).first_or_404()
+    response = make_response(jsonify(tournament.to_dict()),200)
+    return response
 
 @app.route('/Register', methods=['POST'])
 def register():

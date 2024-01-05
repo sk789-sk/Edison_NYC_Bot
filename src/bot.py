@@ -185,6 +185,17 @@ async def get_users_results(interaction:discord.Interaction, konami_id:int=None,
 
 @client.tree.command(name='get_tournament_results',description='displays last 10 tournament from dropdown or results for specific tournament if criteria')
 async def get_tournament_results(interaction:discord.Interaction, location:str=None,date:str=None):
+
+    #If location or date is specified, 
+        #We send back a list of tournaments that are found.
+        #If list has only 1 tournament we display the results and end
+        #If not we then give a dropdown with the list of tournaments.
+        #User selects 1 of the tournaments and then we display the results
+    
+    #If nothing specified
+        #We send back a list of tournaments that are found
+        #We display the list of tournaments 
+        #User selects 1 of the tournaments and we then display the results
     pass
     
 @client.tree.command(name='info', description='get your konami id, and name you are registered with')
