@@ -9,11 +9,12 @@ from math import log2 , floor
 
 alias_mapping = {
         'gu' : 'Gaming  Universe',
-        'gaming universe' : 'Gaming Universe',
+        'gaminguniverse' : 'Gaming Universe',
         'gc' : "Gamer's Choice",
-        "gamers choice" : "Gamer's Choice",
+        "gamerschoice" : "Gamer's Choice",
+        "gamer'schoice" : "Gamer's Choice",
         'cq' : 'Card Quest',
-        "card quest" : 'Card Quest'
+        "cardquest" : 'Card Quest'
 }
 
 
@@ -138,7 +139,7 @@ def getUserResults():
         response = make_response({},404)
     return response
 
-@app.route('/allTournaments')
+@app.route('/allTournamentsTest')
 def returnAllTournaments():
 
     limit = None
@@ -155,20 +156,32 @@ def returnAllTournaments():
 @app.route('/tournamentResults')
 def getTournamentResults():
     #There are 2 options happening. First we give you the database_id and can identify from that
-    #The second option is i pass in an filter arguements, date and venue and use that to get the tournament corresponding with it, 
+    #The second option is pass in an filter arguements, date and venue and use that to get the tournament corresponding with it, 
+
+    limit = None
+
+    if request.args.get('limit') is not None:
+        limit = int(request.args.get('limit'))
+
 
     filters = []
     for key in request.args:
-        print(key,request.args[key])
 
-        filter_element = getattr(Tournament,key)==request.args[key]
-        filters.append(filter_element)
-    
-    t_list = Tournament.query.filter(*filters).all()
-    
-    t_dict = [t.to_dict() for t in t_list]
+        if key == 'limit':
+            continue
+        else:
+            print(key,request.args[key])
+            filter_element = getattr(Tournament,key)==request.args[key]
+            filters.append(filter_element)
+        
+    # t_list = Tournament.query.filter(*filters).all()
 
-    response = make_response(jsonify(t_dict),200)
+    t_list = Tournament.query.filter(*filters).order_by(Tournament.date.desc()).limit(limit).all()
+    if len(t_list)>0:
+        t_dict = [t.to_dict() for t in t_list]
+        response = make_response(jsonify(t_dict),200)
+    else:
+        response = make_response({},404)
     return response
 
 @app.route('/tournamentresultsid/<int:id>')

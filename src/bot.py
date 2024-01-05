@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from table2ascii import table2ascii
 
 from parse_ocr import parsetext , parse_file
+from bot_ui_models import dropdownView
 
 load_dotenv()
 
@@ -186,18 +187,98 @@ async def get_users_results(interaction:discord.Interaction, konami_id:int=None,
 @client.tree.command(name='get_tournament_results',description='displays last 10 tournament from dropdown or results for specific tournament if criteria')
 async def get_tournament_results(interaction:discord.Interaction, location:str=None,date:str=None):
 
-    #If location or date is specified, 
-        #We send back a list of tournaments that are found.
+    #We send back a list of tournaments that are found.
         #If list has only 1 tournament we display the results and end
         #If not we then give a dropdown with the list of tournaments.
         #User selects 1 of the tournaments and then we display the results
     
-    #If nothing specified
-        #We send back a list of tournaments that are found
-        #We display the list of tournaments 
+    #We display the list of tournaments 
         #User selects 1 of the tournaments and we then display the results
-    pass
+
+    params = {}
+
+    if location:
+        params['host'] = location
+    if date:
+        params['date'] = date
+
+    params['limit'] = 15
     
+    query_string = urlencode(params)
+
+    base_url = 'http://127.0.0.1:5557/tournamentResults'
+
+    r = requests.get(f'{base_url}?{query_string}', timeout=30.0)
+
+    if r.ok():
+        data = r.json()
+
+        if len(data) ==1:
+
+            #split into its own function later
+
+            #we display the results of said tournament
+            #Assume that the entrants returned are in order form r1->last
+
+            t_obj = data[0]
+
+            host,rounds,t_date,url,results = t_obj['host'], t_obj['rounds'], t_obj['date'],t_obj['url'] , t_obj['Entrant']
+
+            #Create table for results
+            table_header = ['Rank','Name','Konami ID']
+
+            table_body = [[entrant['rank'],entrant['user_info']["name"],entrant['user_info']["konami_id"]] for entrant in results]
+
+            table = table2ascii(header=table_header,body=table_body)
+
+            #Create message
+            message_header = f'Results for {rounds} tournament at {host} on {t_date}'
+
+            message = f'```{message_header}\n {table}\n```[Link to Picture Used to Create Standing](<{url}>)'
+
+            # return await interaction.response.send_message(message)
+        else:
+            #we need to pick a tournament
+            #Need to create a dropdown of tournaments to select from
+            print('need to select')        
+
+            options_list = [discord.SelectOption(label = f'Tournament at {tournament["host"]} on {tournament["date"]}', value = idx , description= f'') for idx ,tournament in enumerate(data)]
+
+            await interaction.response.send_message("",view=dropdownView(options=options_list), ephemeral=True)
+
+            #check for user input
+
+            try:
+                interaction = await client.wait_for('interaction', timeout=30.0)
+                t_idx = int(interaction.data["values"][0])
+            
+            except asyncio.TimeoutError:
+                return await interaction.response.send_message('Timed out. Try again', ephemeral=True)
+            
+            #use the selected tournament to create the table
+            t_obj = data[t_idx]
+
+            host,rounds,t_date,url,results = t_obj['host'], t_obj['rounds'], t_obj['date'],t_obj['url'] , t_obj['Entrant']
+
+            #Create table for results
+            table_header = ['Rank','Name','Konami ID']
+
+            table_body = [[entrant['rank'],entrant['user_info']["name"],entrant['user_info']["konami_id"]] for entrant in results]
+
+            table = table2ascii(header=table_header,body=table_body)
+
+            #Create message
+            message_header = f'Results for {rounds} tournament at {host} on {t_date}'
+
+            message = f'```{message_header}\n {table}\n```[Link to Picture Used to Create Standing](<{url}>)'
+
+    else:
+        message = 'No Tournament with Specified criteria found, check date and spelling of location'
+        # return await interaction.response.send_message(message)
+        
+    await interaction.response.send_message(message)
+
+
 @client.tree.command(name='info', description='get your konami id, and name you are registered with')
 async def info(interaction:discord.Interaction):
     pass
