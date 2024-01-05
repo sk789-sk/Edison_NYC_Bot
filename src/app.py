@@ -1,6 +1,7 @@
 from flask import Flask, make_response, jsonify, request, session
 from sqlalchemy import func , desc
 from sqlalchemy.exc import SQLAlchemyError 
+from sqlalchemy.orm import joinedload
 
 
 from config import app, db
@@ -123,7 +124,9 @@ def getUserResults():
 
     #We get back either a discord id or a konami id. 
     #We then create a filter for that
+
     filters = []
+    
     for key in request.args:
         print(key,request.args[key])
 
@@ -131,9 +134,9 @@ def getUserResults():
         filters.append(filter_element)
     
     user = User.query.filter(*filters).first()
-
-    # user = User.query.filter(User.discord_id==discord_id).first()
-    if user:
+    
+    if user:        
+        user.Entrant = sorted(user.Entrant, key= lambda x: x.tournament_info.date, reverse=True)
         response = make_response(jsonify(user.to_dict()),200)
     else:
         response = make_response({},404)
