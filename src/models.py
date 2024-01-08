@@ -18,6 +18,11 @@ class Tournament(db.Model, SerializerMixin):
     host_list = ['Gaming Universe',"Gamer's Choice",'Card Quest','Collectors Emporium']
     
     #add Validation for host list
+    @validates('host')
+    def validate_host(self,key,host):
+        if host not in self.host_list:
+            raise ValueError(f"Invalid host")
+        return host
 
 class User(db.Model,SerializerMixin):
     __tablename__ = 'Users'

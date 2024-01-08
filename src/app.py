@@ -43,6 +43,12 @@ def add_Tournament():
 
     processedVenue = input.lower().replace(" ","")
 
+    t_exists = Tournament.query.filter(Tournament.date==data['date'],Tournament.host==alias_mapping.get(processedVenue)).first()
+
+    if t_exists:
+        response = make_response({},409)
+        return response
+
     try:
         new_Tournament = Tournament(
             date = data['date'],

@@ -115,9 +115,20 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
     if r.ok:
         data = r.json()
 
-        table = create_tournament_table(data)
+
+        #table = create_tournament_table(data)
+
+        header = ['Rank', 'Name', 'Konami ID']
+        body = []
+
+        for entrant in data:
+            body.append([entrant['rank'], entrant['user_info']['name'], entrant['user_info']['konami_id']])
+
+        table = table2ascii(header=header,body=body)
         
         message = f'```Results for tournament at {venue} on {date}\n{table}\n```[Link to Picture of Standing Used to Generate Table](<{first_attachment["url"]}>)'
+    elif r.status_code==409:
+        message = 'Tournament already submitted'
     else:
         message = 'Failed to Create'
 
@@ -135,10 +146,10 @@ async def get_users_results(interaction:discord.Interaction, konami_id:int=None,
     else:
         params['discord_id'] = interaction.user.id
     
-    query_string = urlencode(params)
+    query = urlencode(params)
     base_url = 'http://127.0.0.1:5557/userResults'
 
-    r = requests.get(f'{base_url}?{query_string}', timeout=30.0)
+    r = requests.get(f'{base_url}?{query}', timeout=30.0)
 
     if r.ok:
         data = r.json()
@@ -163,7 +174,6 @@ async def get_users_results(interaction:discord.Interaction, konami_id:int=None,
     await interaction.response.send_message(message)
 
 @client.tree.command(name='get_tournament_results',description='displays last 10 tournament from dropdown or results for specific tournament if criteria')
-
 async def get_tournament_results(interaction:discord.Interaction, location:str=None,date:str=None):
     
     #Get tournaments that fit the criteria
