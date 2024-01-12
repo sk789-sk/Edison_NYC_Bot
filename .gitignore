@@ -4,5 +4,9 @@
 /src/migrations
 /src/app.db
 /src/NYC_Edison
+/NYC_Edison
 plan.txt
 todo.txt
+
+nyc_edison.sql
+ocr_data.pkl
