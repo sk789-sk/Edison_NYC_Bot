@@ -91,7 +91,17 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
 
     if response.ok:
         data = response.json()
-        text = data['ParsedResults'][0]['ParsedText']
+        
+        if data['IsErroredOnProcessing'] == False:
+            text = data['ParsedResults'][0]['ParsedText']
+        else:
+            error_message = data['ErrorMessage']
+            return await interaction.response.send_message(error_message)
+    else:
+        return await interaction.response.send_message("Error Getting Image Data")
+
+
+
 
     with open(f'ocr_data.pkl','wb') as f:
         pickle.dump(text,f)

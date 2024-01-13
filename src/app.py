@@ -9,7 +9,7 @@ from models import *
 from math import log2 , floor
 
 alias_mapping = {
-        'gu' : 'Gaming  Universe',
+        'gu' : 'Gaming Universe',
         'gaminguniverse' : 'Gaming Universe',
         'gc' : "Gamer's Choice",
         "gamerschoice" : "Gamer's Choice",
@@ -65,7 +65,9 @@ def add_Tournament():
         return response
 
     #Create entrants
+
     new_Entrants = []
+
     for entrant in data['entrants']:
 
         user = User.query.filter(User.konami_id==int(entrant[2])).first()
