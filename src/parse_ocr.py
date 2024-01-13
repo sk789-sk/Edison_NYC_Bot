@@ -24,7 +24,7 @@ def parse_file(file):
     for line in lines:
         match = re.match(pattern, line)
         if match:
-            initial_digit = match.group(1) or (len(entrants)+1)
+            initial_digit = (len(entrants)+1) #match.group(1)
             name = match.group(2)
             id_ = match.group(3)
             print(f'Initial Digit: {initial_digit}, Name: {name}, ID: {id_}')
