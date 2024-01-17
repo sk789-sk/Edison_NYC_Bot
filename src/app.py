@@ -65,7 +65,9 @@ def add_Tournament():
         user = User.query.filter(User.konami_id==int(entrant[2])).first()
  
         if user == None:
-            user = db.session.query(User).filter(func.similarity(User.name, entrant[1]) > .8).first()
+
+            # user = db.session.query(User).filter(func.similarity(User.name, entrant[1]) > .8).first()
+            user = db.session.query(User).filter(func.levenshtein(User.name, entrant[1]) < 3).first()
             #Change this to levenshtein distance makes more sense for small strings
             #Need to handle multiple similarities say we have Nicky Chow and Nocky Chow in users.
 
@@ -82,8 +84,7 @@ def add_Tournament():
                 continue #Failed to create entrant should just move to the next one
         else:
             #create user, then create entrant
-            print('no user')
-            print(entrant)
+            print(f'no user for {entrant}')
             try:
                 new_user = User(
                     name = entrant[1],
@@ -126,21 +127,44 @@ def getUserResults():
     #We get back either a discord id or a konami id. 
     #We then create a filter for that
 
-    filters = []
-    
-    for key in request.args:
-        print(key,request.args[key])
+    filter_functions = {
+        'name' : lambda value: User.name.ilike(f'%{value}%'),
+        'discord_id' : lambda value: User.discord_id == value,
+        'konami_id' : lambda value: User.konami_id == value
 
-        filter_element = getattr(User,key)==request.args[key]
-        filters.append(filter_element)
+    }
+
+    filters = []
+
+    for key, value in request.args.items():
+        if key in filter_functions:
+            filter_element = filter_functions[key](value)
+            filters.append(filter_element)
+        else:
+            print('Filter param unsupported')    
+
+    # for key in request.args:
+    #     print(key,request.args[key])
+
+    #     filter_element = getattr(User,key)==request.args[key]
+    #     filters.append(filter_element)
     
-    user = User.query.filter(*filters).first()
+    users = User.query.filter(*filters).all()
+
+    #convert htis to all() check for length [0,1,1+]
+
+    print(users)
     
-    if user:        
+    if len(users)==1:
+        user = users[0]        
         user.Entrant = sorted(user.Entrant, key= lambda x: x.tournament_info.date, reverse=True)
         response = make_response(jsonify(user.to_dict()),200)
-    else:
+    elif len(users) == 0:
         response = make_response({},404)
+    else:
+        #We have multiple users.
+        data = [user.to_dict() for user in users]
+        response = make_response(jsonify(data),206)
     return response
 
 @app.route('/allTournamentsTest')

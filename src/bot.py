@@ -143,7 +143,7 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
     await interaction.response.send_message(message)
     
 @client.tree.command(name='get_users_results', description='prioritizes user>konami_id>user_who put command')
-async def get_users_results(interaction:discord.Interaction, konami_id:int=None,user:str=None):
+async def get_users_results(interaction:discord.Interaction, konami_id:int=None,user:str=None,name:str=None):
 
     params = {}
 
@@ -151,6 +151,11 @@ async def get_users_results(interaction:discord.Interaction, konami_id:int=None,
         params['discord_id'] = user[2:-1]
     elif konami_id:
         params['konami_id'] = konami_id
+    elif name:
+        #
+        modified_name = name
+        params['name'] = modified_name
+
     else:
         params['discord_id'] = interaction.user.id
     
@@ -159,10 +164,11 @@ async def get_users_results(interaction:discord.Interaction, konami_id:int=None,
 
     r = requests.get(f'{base_url}?{query}', timeout=30.0)
 
-    if r.ok:
+    if r.status_code==200:
         data = r.json()
         
         #Get the relavent information
+
         name = data['name']
         username = None
 
@@ -171,6 +177,34 @@ async def get_users_results(interaction:discord.Interaction, konami_id:int=None,
             username = target.name
 
         table = create_user_table(data)
+
+        message = f'```Results for {name} (Discord username: {username if username else "Not-Registered"})\n{table}\n```'
+
+    elif r.status_code==206: #Really just have it send back the 200 and and check for what data is and decide waht to do instead of this tbh
+
+        #create dropdown of potential users
+        data = r.json()
+        options_list = [discord.SelectOption(label = f'{user["name"]} on {user["konami_id"]}', value = idx, description= f'') for idx,user in enumerate(data)]
+
+        await interaction.response.send_message("Multiple potential users. Select 1 from dropdown.",view=dropdownView(options=options_list), ephemeral=True)
+
+        try:
+            interaction = await client.wait_for('interaction', timeout=30.0)
+            user_idx = int(interaction.data["values"][0])
+        
+        except asyncio.TimeoutError:
+            return await interaction.response.send_message('Timed out. Try again', ephemeral=True)        
+        
+        user_obj = data[user_idx]
+        name = user_obj['name']
+        
+        username = None
+
+        if user_obj['discord_id']:
+            target = await client.fetch_user(user_obj['discord_id'])
+            username = target.name        
+
+        table = create_user_table(user_obj)
 
         message = f'```Results for {name} (Discord username: {username if username else "Not-Registered"})\n{table}\n```'
 
