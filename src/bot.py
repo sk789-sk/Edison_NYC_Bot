@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from table2ascii import table2ascii
 
 from parse_ocr import parsetext , parse_file
-from bot_ui_models import dropdownView
+from bot_ui_models import dropdownView, NameConverter
 from bot_ui_functions import create_tournament_table, create_user_table , build_query_string
 
 load_dotenv()
@@ -142,7 +142,7 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
 
     await interaction.response.send_message(message)
     
-@client.tree.command(name='get_users_results', description='prioritizes user>konami_id>user_who put command')
+@client.tree.command(name='get_users_results', description='prioritizes user>konami_id>name>user_who put command')
 async def get_users_results(interaction:discord.Interaction, konami_id:int=None,user:str=None,name:str=None):
 
     params = {}
@@ -152,7 +152,7 @@ async def get_users_results(interaction:discord.Interaction, konami_id:int=None,
     elif konami_id:
         params['konami_id'] = konami_id
     elif name:
-        #
+        #strip leading leading and trailing whitespace, lower case 
         modified_name = name
         params['name'] = modified_name
 
@@ -184,7 +184,7 @@ async def get_users_results(interaction:discord.Interaction, konami_id:int=None,
 
         #create dropdown of potential users
         data = r.json()
-        options_list = [discord.SelectOption(label = f'{user["name"]} on {user["konami_id"]}', value = idx, description= f'') for idx,user in enumerate(data)]
+        options_list = [discord.SelectOption(label = f'{user["name"]}  id:{user["konami_id"]}', value = idx, description= f'') for idx,user in enumerate(data)]
 
         await interaction.response.send_message("Multiple potential users. Select 1 from dropdown.",view=dropdownView(options=options_list), ephemeral=True)
 
