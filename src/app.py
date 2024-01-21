@@ -68,7 +68,11 @@ def add_Tournament():
 
             # user = db.session.query(User).filter(func.similarity(User.name, entrant[1]) > .8).first()
             user = db.session.query(User).filter(func.levenshtein(User.name, entrant[1]) < 3).first()
+            print(entrant[1])
+            print(user.name) if user else print('no match')
+
             #Change this to levenshtein distance makes more sense for small strings
+            #order by and then select the first
             #Need to handle multiple similarities say we have Nicky Chow and Nocky Chow in users.
 
         if user:

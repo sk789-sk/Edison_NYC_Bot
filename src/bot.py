@@ -53,6 +53,7 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
     filename = f"uploaded_image_{int(time.time())}.jpg"
     resolved_attachments = interaction.data.get('resolved').get('attachments')
     first_attachment = next(iter(resolved_attachments.values()), {})
+    
     r = requests.get(first_attachment['url'], timeout=30.0)
 
     if r.ok:
@@ -109,7 +110,7 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
     
 
     #Take the information and pass it to my api 
-
+    
     data = {
         'date':date,
         'venue' : venue,

@@ -16,7 +16,7 @@ BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
 postgres_migrations_repo = os.path.join(BASE_DIR,'migrations','postgresql')
 
-POSTGRES_DATABASE = f'postgresql://{os.getenv("DB_Username")}:{os.getenv("DB_Password")}@{os.getenv("DB_Host")}/{os.getenv("DB_name")}'
+POSTGRES_DATABASE = f'postgresql://{os.getenv("DB_Username")}:{os.getenv("DB_Password")}@{os.getenv("DB_Host")}/{os.getenv("test_DB_name")}'
 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = POSTGRES_DATABASE

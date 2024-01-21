@@ -15,8 +15,10 @@ pillow = "*"
 sqlalchemy-serializer = "*"
 psycopg2 = "*"
 table2ascii = "*"
+opencv-python = "*"
 
 [dev-packages]
+ipykernel = "*"
 
 [requires]
 python_version = "3.8"
