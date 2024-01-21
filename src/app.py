@@ -32,16 +32,7 @@ def add_Tournament():
     data = request.get_json()
 
     rounds = floor(log2(len(data['entrants'])))+1
-
-    #create the tournaments and get its id.
-
-    #Aliases for venues
-    
-    #lowercase the entry and remove the whitespaces
-
-    input = data['venue']
-
-    processedVenue = input.lower().replace(" ","")
+    processedVenue = data['venue'].lower().replace(" ","")
 
     try:
         new_Tournament = Tournament(
@@ -51,7 +42,9 @@ def add_Tournament():
             rounds = rounds
         )
         db.session.add(new_Tournament)
-        db.session.commit()
+        db.session.flush()
+
+        #db.session.commit()
         print(new_Tournament.id)
 
     except ValueError:
@@ -60,21 +53,19 @@ def add_Tournament():
 
     #Create entrants
     new_Entrants = []
+    new_users = []
+    failed_entrants = []
     for entrant in data['entrants']:
 
         user = User.query.filter(User.konami_id==int(entrant[2])).first()
  
         if user == None:
 
-            # user = db.session.query(User).filter(func.similarity(User.name, entrant[1]) > .8).first()
-            user = db.session.query(User).filter(func.levenshtein(User.name, entrant[1]) < 3).first()
-            print(entrant[1])
-            print(user.name) if user else print('no match')
+            potential_users = db.session.query(User).filter(func.levenshtein(User.name, entrant[1]) < 5).order_by(func.levenshtein(User.name, entrant[1])).all()
 
-            #Change this to levenshtein distance makes more sense for small strings
-            #order by and then select the first
-            #Need to handle multiple similarities say we have Nicky Chow and Nocky Chow in users.
-
+            if len(potential_users) !=0:
+                user = potential_users[0]
+        
         if user:
             #Create Entrant
             try:
@@ -85,7 +76,8 @@ def add_Tournament():
                 )
                 new_Entrants.append(new_Entrant)
             except ValueError:
-                continue #Failed to create entrant should just move to the next one
+                failed_entrants.append(user)
+                continue #Failed to create entrant for user. 
         else:
             #create user, then create entrant
             print(f'no user for {entrant}')
@@ -94,11 +86,16 @@ def add_Tournament():
                     name = entrant[1],
                     konami_id = entrant[2]
                 )
+
+                new_users.append(new_user)
                 db.session.add(new_user)
-                db.session.commit()
+                db.session.flush()
+                #db.session.commit()
+
             except SQLAlchemyError as e:
                 print(e)
                 response = make_response({'Error': 'Failed to create User'},500)
+
             if new_user:
                 try:
                     new_Entrant = Entrant(
@@ -121,6 +118,8 @@ def add_Tournament():
     except SQLAlchemyError as e:
         print(e)
         response = make_response({'Error': 'Failed to commit entrants'},500)
+    print(f'Failed to create entrants fof {failed_entrants}')
+    print(f'Created new Users for {new_users}')
 
     return response
 
@@ -158,17 +157,24 @@ def getUserResults():
     #convert htis to all() check for length [0,1,1+]
 
     print(users)
-    
-    if len(users)==1:
-        user = users[0]        
+
+    #sort and turn into dict is better
+    for user in users:
         user.Entrant = sorted(user.Entrant, key= lambda x: x.tournament_info.date, reverse=True)
-        response = make_response(jsonify(user.to_dict()),200)
-    elif len(users) == 0:
+    
+    # if len(users)==1:
+    #     data = [user.to_dict() for user in users]
+    #     response = make_response(jsonify(data),200)
+
+    #     # user = users[0]        
+    #     # user.Entrant = sorted(user.Entrant, key= lambda x: x.tournament_info.date, reverse=True)
+    #     # response = make_response(jsonify(user.to_dict()),200)
+    if len(users) == 0:
         response = make_response({},404)
     else:
-        #We have multiple users.
+        #We have multiple users. Shuld handle this in the bot front instead of here
         data = [user.to_dict() for user in users]
-        response = make_response(jsonify(data),206)
+        response = make_response(jsonify(data),200)
     return response
 
 @app.route('/allTournamentsTest')

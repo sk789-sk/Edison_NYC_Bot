@@ -79,6 +79,8 @@ cv.imwrite(f'{save_path}/19_bin.jpg', bined)
 
 
 ##Tesseract OCR###
+
+
 img = Image.open(img_path_19)
 ocr_result = pytesseract.image_to_string(img)
 print(ocr_result)
@@ -103,6 +105,25 @@ for line in splits:
 
 ######
 
+def parse_tesseract(file_path):
+    img = Image.open(file_path)
+    ocr_result = pytesseract.image_to_string(img)
+    print(ocr_result)
+
+    splits = ocr_result.split('\n')
+    pattern = r'^(\d+)?\t?(.*?)\s+\((\d+)\)'
+    entrants = []
+
+    for line in splits:
+        match = re.match(pattern, line)
+        if match:
+            initial_digit = (len(entrants)+1) #match.group(1)
+            name = match.group(2)
+            id_ = match.group(3)
+        #print(f'Initial Digit: {initial_digit}, Name: {name}, ID: {id_}')
+            entrants.append([initial_digit,name, id_])
+
+    return entrants
 
 
 

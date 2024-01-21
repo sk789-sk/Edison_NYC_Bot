@@ -12,7 +12,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from table2ascii import table2ascii
 
-from parse_ocr import parsetext , parse_file
+from parse_ocr import parsetext , parse_file , parse_tesseract
 from bot_ui_models import dropdownView, NameConverter
 from bot_ui_functions import create_tournament_table, create_user_table , build_query_string
 
@@ -48,8 +48,6 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
     if date is None:
         date = datetime.now().strftime("%m-%d-%Y")
 
-    print(date)
-
     filename = f"uploaded_image_{int(time.time())}.jpg"
     resolved_attachments = interaction.data.get('resolved').get('attachments')
     first_attachment = next(iter(resolved_attachments.values()), {})
@@ -69,50 +67,10 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
         with open(file_path, "wb") as file:
             file.write(image)
         
-    #Take the Image and post it to the OCR API
-    
-    ocr_key = os.getenv('OCR_API_Key')
-    url = "https://api.ocr.space/parse/image"
-
-    payload = {
-        'language' : 'eng',
-        'isOverlayRequired' : 'false',
-        'isTable' : 'True',
-        'url' : first_attachment['url']
-    }
-
-    headers = {
-        'apikey':ocr_key
-    }
-
-    response = requests.request("POST", url, headers=headers, data=payload, timeout=60.0)
-    
-    #Parsed Results -->list[0] --> Parsed Text
-    #Alot of unused info probably better this way and getting error codes vs parsing entire dictionar
-
-    if response.ok:
-        data = response.json()
-        
-        if data['IsErroredOnProcessing'] == False:
-            text = data['ParsedResults'][0]['ParsedText']
-        else:
-            error_message = data['ErrorMessage']
-            return await interaction.response.send_message(error_message)
-    else:
-        return await interaction.response.send_message("Error Getting Image Data")
-
-    with open(f'ocr_data.pkl','wb') as f:
-        pickle.dump(text,f)
-
-    #Parse the text
-        
-    standing_list = parse_file('ocr_data.pkl')
-    
-
-    #Take the information and pass it to my api 
+    standing_list = parse_tesseract(file_path)        
     
     data = {
-        'date':date,
+            'date':date,
         'venue' : venue,
         'url' : first_attachment['url'],
         'entrants' : standing_list
@@ -123,8 +81,6 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
 
     if r.ok:
         data = r.json()
-
-
         #table = create_tournament_table(data)
 
         header = ['Rank', 'Name', 'Konami ID']
@@ -166,49 +122,48 @@ async def get_users_results(interaction:discord.Interaction, konami_id:int=None,
     r = requests.get(f'{base_url}?{query}', timeout=30.0)
 
     if r.status_code==200:
+    
         data = r.json()
         
-        #Get the relavent information
+        if len(data) == 1:
 
-        name = data['name']
-        username = None
+            
+            name = data[0]['name']
+            username = None
 
-        if data['discord_id']:
-            target = await client.fetch_user(data['discord_id'])
-            username = target.name
+            if data[0]['discord_id']:
+                target = await client.fetch_user(data[0]['discord_id'])
+                username = target.name
 
-        table = create_user_table(data)
+            table = create_user_table(data[0])
 
-        message = f'```Results for {name} (Discord username: {username if username else "Not-Registered"})\n{table}\n```'
-
-    elif r.status_code==206: #Really just have it send back the 200 and and check for what data is and decide waht to do instead of this tbh
-
-        #create dropdown of potential users
-        data = r.json()
-        options_list = [discord.SelectOption(label = f'{user["name"]}  id:{user["konami_id"]}', value = idx, description= f'') for idx,user in enumerate(data)]
-
-        await interaction.response.send_message("Multiple potential users. Select 1 from dropdown.",view=dropdownView(options=options_list), ephemeral=True)
-
-        try:
-            interaction = await client.wait_for('interaction', timeout=30.0)
-            user_idx = int(interaction.data["values"][0])
+            message = f'```Results for {name} (Discord username: {username if username else "Not-Registered"})\n{table}\n```'
         
-        except asyncio.TimeoutError:
-            return await interaction.response.send_message('Timed out. Try again', ephemeral=True)        
-        
-        user_obj = data[user_idx]
-        name = user_obj['name']
-        
-        username = None
+        else: #multiple users
+            options_list = [discord.SelectOption(label = f'{user["name"]}  id:{user["konami_id"]}', value = idx, description= f'') for idx,user in enumerate(data)]
 
-        if user_obj['discord_id']:
-            target = await client.fetch_user(user_obj['discord_id'])
-            username = target.name        
+            await interaction.response.send_message("Multiple potential users. Select 1 from dropdown.",view=dropdownView(options=options_list), ephemeral=True)
 
-        table = create_user_table(user_obj)
+            try:
+                interaction = await client.wait_for('interaction', timeout=30.0)
+                user_idx = int(interaction.data["values"][0])
+            
+            except asyncio.TimeoutError:
+                return await interaction.response.send_message('Timed out. Try again', ephemeral=True)        
+            
+            user_obj = data[user_idx]
+            name = user_obj['name']
+            
+            username = None
 
-        message = f'```Results for {name} (Discord username: {username if username else "Not-Registered"})\n{table}\n```'
+            if user_obj['discord_id']:
+                target = await client.fetch_user(user_obj['discord_id'])
+                username = target.name        
 
+            table = create_user_table(user_obj)
+
+            message = f'```Results for {name} (Discord username: {username if username else "Not-Registered"})\n{table}\n```'    
+    
     elif r.status_code==404:
         message = 'User Does not exist, double check Konami id and/or discord id'
     else:
