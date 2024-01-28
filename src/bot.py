@@ -66,11 +66,14 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
 
         with open(file_path, "wb") as file:
             file.write(image)
-        
+    else:
+        message = 'Error reading uploaded Image'
+        return await interaction.response.send_message(message)
+
     standing_list = parse_tesseract(file_path)        
     
     data = {
-            'date':date,
+        'date':date,
         'venue' : venue,
         'url' : first_attachment['url'],
         'entrants' : standing_list

@@ -5,6 +5,9 @@ import numpy as np
 import pytesseract
 from PIL import Image
 import os
+import datetime
+
+save_folder = '/home/shams/Development/code/post-grad/Edison-NYC-Bot/NYC_Edison/Processed'
 
 # OCR pipeline
 # Image uploaded to discord. Image taken from discord and saved into  a file on disk and then we open it. 
@@ -36,17 +39,17 @@ import os
 
 save_path = '../NYC_Edison/Processed/'
 
-img_path_19 = '/home/shams/Development/code/post-grad/Edison-NYC-Bot/NYC_Edison/gc_jan_19.jpg'
-test_img = cv.imread(img_path_19)
-
-
-cv.imwrite(os.path.join(save_path,'19_test.jpg'),test_img)
 
 #Pre-Processing Test
 
 test_img_path = '/home/shams/Development/code/post-grad/Edison-NYC-Bot/NYC_Edison/Processed/19_test.jpg'
-
 edit_img = cv.imread(test_img_path)
+
+def invert(path, save_path='/home/shams/Development/code/post-grad/Edison-NYC-Bot/NYC_Edison/Processed'):
+    edit_img = cv.imread(path)
+    inverted_image = cv.bitwise_not(edit_img)
+    cv.imwrite(f'{save_path}/inverted.jpg',inverted_image)
+
 
 #Inverting Image
 
@@ -55,14 +58,21 @@ edit_img = cv.imread(test_img_path)
 # cv.imwrite(f'{save_path}/19_invert.jpg', inverted_image)
 
 ##Black and White
+def resize(img, save_path=save_folder, name='resize',date=None):
+    if not date:
+        date = datetime.now().strftime("%m-%d-%Y")
+    
+    #Want to rescale image so it is minimum 300 dpi, not sure how that corresponds with starting with a digital image
 
-grey_img = cv.cvtColor(edit_img, cv.COLOR_BGR2GRAY)
-cv.imwrite(f'{save_path}/19_grey.jpg', grey_img)
+    resized = cv.resize(img,None,fx=2,fy=2 ,interpolation=cv.INTER_CUBIC ) 
+    cv.imwrite(f'{save_path}/{name}_{date}.jpg', resized)
+    return resized
+
 
 ##Thresholding and Binarization
 
-_, bined = cv.threshold(grey_img,127,255,cv.THRESH_BINARY)
-cv.imwrite(f'{save_path}/19_bin.jpg', bined)
+# _, bined = cv.threshold(grey_img,127,255,cv.THRESH_BINARY)
+# cv.imwrite(f'{save_path}/19_bin.jpg', bined)
 
 #Noise Removal
 
@@ -76,42 +86,18 @@ cv.imwrite(f'{save_path}/19_bin.jpg', bined)
 #look into kernals and images
 
 
+def pre_process_image(file_path):
+    pass
 
-
-##Tesseract OCR###
-
-
-img = Image.open(img_path_19)
-ocr_result = pytesseract.image_to_string(img)
-print(ocr_result)
-
-
-
-
-
-####Parse OCR###
-splits = ocr_result.split('\n')
-pattern = r'^(\d+)?\t?(.*?)\s+\((\d+)\)'
-entrants = []
-
-for line in splits:
-    match = re.match(pattern, line)
-    if match:
-        initial_digit = (len(entrants)+1) #match.group(1)
-        name = match.group(2)
-        id_ = match.group(3)
-        #print(f'Initial Digit: {initial_digit}, Name: {name}, ID: {id_}')
-        entrants.append([initial_digit,name, id_])
-
-######
 
 def parse_tesseract(file_path):
+    print(file_path)
     img = Image.open(file_path)
     ocr_result = pytesseract.image_to_string(img)
     print(ocr_result)
 
     splits = ocr_result.split('\n')
-    pattern = r'^(\d+)?\t?(.*?)\s+\((\d+)\)'
+    pattern = r'^(\d+)?\t?(.*?)\s+\((\d+)?\)'
     entrants = []
 
     for line in splits:
@@ -154,7 +140,10 @@ def parse_file(file):
     entrants = []
 
     for line in lines:
+        
         match = re.match(pattern, line)
+
+
         if match:
             initial_digit = (len(entrants)+1) #match.group(1)
             name = match.group(2)
@@ -176,6 +165,7 @@ def parsetext(text):
 
 if __name__ == "__main__":
     # data = parse_file('test.pkl')
-    data = '1'
-    print(data)
+    path = '/home/shams/Development/code/post-grad/Edison-NYC-Bot/NYC_Edison/gu_test.jpg'
+    parse_tesseract(path)
+    print('hehe')
     
