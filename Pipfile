@@ -16,6 +16,7 @@ sqlalchemy-serializer = "*"
 psycopg2 = "*"
 table2ascii = "*"
 opencv-python = "*"
+matplotlib = "*"
 
 [dev-packages]
 ipykernel = "*"

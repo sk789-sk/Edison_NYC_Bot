@@ -1,4 +1,5 @@
 .env
+**/*.jpg
 
 /src/__pycache__
 /src/migrations
@@ -8,6 +9,8 @@
 plan.txt
 todo.txt
 
+/db_backups
 nyc_edison.sql
 ocr_data.pkl
 db_manual_add.sql
+backupscript.sh
