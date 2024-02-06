@@ -8,6 +8,21 @@ from matplotlib import pyplot as plt
 from parse_ocr import parse_tesseract
 
 
+#Classes
+
+
+class ROI():
+    def __init__(self, x,y,w,h,area,centroid) -> None:
+        self.x_coor = x
+        self.y_coor = y
+        self.width = w
+        self.height = h
+        self.area = area #area as a percentage of the original image
+        self.centroid_distance = centroid #distance from the center
+    def __repr__(self):
+        return f'ROI information'
+
+
 #Image processing functions here
 
 # Image uploaded to discord. Image taken from discord and saved into  a file on disk and then we open it. 
@@ -19,6 +34,133 @@ save_path = '../NYC_Edison/Processed/'
 
 save_folder = '/home/shams/Development/code/post-grad/Edison-NYC-Bot/NYC_Edison/Processed'
 #Pre-Processing Test
+   
+def find_textBlock(img, name=None):
+
+    #find area of Original image
+
+    area_original = img.shape[0] * img.shape[1] #wigth*height
+    centroid = (img.shape[0]//2 , img.shape[1]//2)
+
+    #copies of image for drawing boxes
+    image_with_all_box = img.copy()
+    image_with_selection = img.copy()
+    
+    #prepare image for contouring
+    gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
+    blur = cv.GaussianBlur(gray, (7,7), 0) #remove noise helps for gu image
+    _, thresh = cv.threshold(blur, 127, 255, cv.THRESH_BINARY_INV) 
+    
+    #dilate image to remove small contours
+    kernel_7 = np.ones((7,7))
+    iters = 3
+    dilation_image = cv.dilate(thresh, kernel_7, iterations=iters) 
+    cv.imwrite(f'{name}_dilation_image_{iters}_count.jpg', dilation_image)
+    
+    # #Find the contours for initial image
+    cnts,_ = cv.findContours(dilation_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    # cv.drawContours(img, cnts, -1, (0,255,0), 3) #to visualize atm
+    
+    #if we have to many contours we increase erosion 
+    while len(cnts) >10 and iters <=10:
+         iters +=1
+         dilation_image = cv.dilate(thresh, kernel_7, iterations=iters) 
+         cv.imwrite(f'{name}_dilation_image_{iters}_count.jpg', dilation_image)
+         cnts,_ = cv.findContours(dilation_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    
+    potential_roi_c = 0
+    roi_info = [] 
+    
+    for c in cnts:
+        x, y, w, h = cv.boundingRect(c)
+        area = w*h
+        if  (.2 * area_original) < area < (.9 * area_original): 
+            potential_roi_c +=1 
+            cv.rectangle(image_with_all_box, (x,y), (x+w,y+h), (0,255,0),2)
+            bbox_centroid = ((x+w)//2 , (y+h)//2)
+            #centroid calculation
+            distance_from_center = np.sqrt((bbox_centroid[0] - centroid[0])**2 +(bbox_centroid[1] - centroid[1])**2)
+
+            roi = ROI(x,y,w,h,(area/area_original),distance_from_center)
+            roi_info.append(roi)
+
+            # roi_info.append([potential_roi_c, area/area_original,iters, (x,y,w,h), distance_from_center])
+
+    if len(roi_info) > 1:
+        
+        sorted_roi = sorted(roi_info, key= lambda x:x.centroid_distance)
+        distance_thresh = sorted_roi[0].centroid_distance*1.05
+
+        filtered_roi = []
+        for roi in sorted_roi: #filter by distance from center
+            print(f' distance from center= {roi.centroid_distance}, coordinates are x={roi.x_coor} , y = {roi.y_coor}')
+
+            if roi.centroid_distance < distance_thresh: #we dont care about orientation, just euclidian distance
+                filtered_roi.append(roi)
+        selected_roi = sorted(filtered_roi, key= lambda x: x.area)[0]
+        print(selected_roi)
+    else:
+        selected_roi = roi_info[0]
+        print(selected_roi)
+
+    cv.rectangle(image_with_selection, (selected_roi.x_coor,selected_roi.y_coor), (selected_roi.x_coor+selected_roi.width , selected_roi.y_coor+selected_roi.height), (0,255,0),2)
+    
+    cv.imwrite(f'{name}_all_blocks.jpg', image_with_all_box)
+    cv.imwrite(f'{name}_selected_block.jpg', image_with_selection)
+
+    return selected_roi , roi_info
+
+
+
+
+def find_textBlock_o(img):
+
+    #Determine Image Type. If it is primarily Black and White aka GC image what we have right now is fine for extracting
+
+    #GU takes images from computers whch has a few issues. 
+    #HSV value for the blue is 206-100-73 
+
+    #find area of image
+
+    area_original = img.shape[0] * img.shape[1] #wigth*height
+
+    #prepare image for contouring
+    
+    gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
+    blur = cv.GaussianBlur(gray, (7,7), 0) #Is thisnecessary?
+    _, thresh = cv.threshold(blur, 127, 255, cv.THRESH_BINARY_INV) #tuple 0 is threshold value 1 is the image arr
+    
+    # Erode the Image to combine all the text into chunks not sure how necessary this will be. 
+    kernel_7 = np.ones((7,7))
+
+
+
+    dilation_image = cv.dilate(thresh, kernel_7, iterations=3) 
+    cv.imwrite('dilation_image.jpg', dilation_image)
+    #keep iterating until we get a good result?
+    
+    #Erotion is expanding black areas
+    #Dilation is expanding white areas areas
+
+
+    #Find the contours
+    #Contours in opencv is looking for white on black so inv thresholding is better. 
+    cnts,_ = cv.findContours(dilation_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    # cv.drawContours(img, cnts, -1, (0,255,0), 3) #to visualize atm
+
+    #find the bounding boxes for the contours, select bounding box where area >20% of picture area, and less that < 90% 
+    for c in cnts:
+        x, y, w, h = cv.boundingRect(c)
+        area = w*h
+        if  (.2 * area_original) < area < (.9 * area_original): 
+            print(area/area_original)
+            cv.rectangle(img, (x,y), (x+w,y+h), (0,255,0),2)
+
+    #Use the bounding boxes to define my ROI which is the text block. 
+    #Pixel density? Largest Areas? 
+    
+    cv.imwrite('jajaja_textblocks.jpg', img)
+    pass
 
 def all_text_black(img):
     hsv_im = cv.cvtColor(img,cv.COLOR_BGR2HSV)
@@ -82,144 +224,6 @@ def all_text_black(img):
     #             dist = cv.pointPolygonTest(c, i, measureDist=False)
     #             if dist >0:
     #                 print('got a hit')
-
-def find_textBlock_o(img):
-
-    #Determine Image Type. If it is primarily Black and White aka GC image what we have right now is fine for extracting
-
-    #GU takes images from computers whch has a few issues. 
-    #HSV value for the blue is 206-100-73 
-
-    #find area of image
-
-    area_original = img.shape[0] * img.shape[1] #wigth*height
-
-    #prepare image for contouring
-    
-    gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
-    blur = cv.GaussianBlur(gray, (7,7), 0) #Is thisnecessary?
-    _, thresh = cv.threshold(blur, 127, 255, cv.THRESH_BINARY_INV) #tuple 0 is threshold value 1 is the image arr
-    
-    # Erode the Image to combine all the text into chunks not sure how necessary this will be. 
-    kernel_7 = np.ones((7,7))
-
-
-
-    dilation_image = cv.dilate(thresh, kernel_7, iterations=3) 
-    cv.imwrite('dilation_image.jpg', dilation_image)
-    #keep iterating until we get a good result?
-    
-    #Erotion is expanding black areas
-    #Dilation is expanding white areas areas
-
-
-    #Find the contours
-    #Contours in opencv is looking for white on black so inv thresholding is better. 
-    cnts,_ = cv.findContours(dilation_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    # cv.drawContours(img, cnts, -1, (0,255,0), 3) #to visualize atm
-
-    #find the bounding boxes for the contours, select bounding box where area >20% of picture area, and less that < 90% 
-    for c in cnts:
-        x, y, w, h = cv.boundingRect(c)
-        area = w*h
-        if  (.2 * area_original) < area < (.9 * area_original): 
-            print(area/area_original)
-            cv.rectangle(img, (x,y), (x+w,y+h), (0,255,0),2)
-
-    #Use the bounding boxes to define my ROI which is the text block. 
-    #Pixel density? Largest Areas? 
-    
-    cv.imwrite('jajaja_textblocks.jpg', img)
-    pass   
-
-def find_textBlock(img, name=None):
-
-    #Determine Image Type. If it is primarily Black and White aka GC image what we have right now is fine for extracting
-
-    #GU takes images from computers whch has a few issues. 
-    #HSV value for the blue is 206-100-73 
-
-    #find area of image
-
-    area_original = img.shape[0] * img.shape[1] #wigth*height
-    centroid = (img.shape[0]//2 , img.shape[1]//2)
-    #prepare image for contouring
-
-    image_with_all_box = img.copy()
-    image_with_selection = img.copy()
-    
-
-    
-    gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
-    blur = cv.GaussianBlur(gray, (7,7), 0) #Is thisnecessary?
-    _, thresh = cv.threshold(blur, 127, 255, cv.THRESH_BINARY_INV) #tuple 0 is threshold value 1 is the image arr
-    
-    # Erode the Image to combine all the text into chunks not sure how necessary this will be. 
-    kernel_7 = np.ones((7,7))
-
-    iters = 3
-    
-    dilation_image = cv.dilate(thresh, kernel_7, iterations=iters) 
-    cv.imwrite(f'{name}_dilation_image_{iters}_count.jpg', dilation_image)
-    
-    # #keep iterating until we get a good result?
-    
-    # #Erotion is expanding black areas
-    # #Dilation is expanding white areas areas
-
-
-    # #Find the contours for initial image
-    cnts,_ = cv.findContours(dilation_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-    # cv.drawContours(img, cnts, -1, (0,255,0), 3) #to visualize atm
-    
-    #if we have to many contours we increase erosion 
-    while len(cnts) >10 and iters <=10:
-         iters +=1
-         dilation_image = cv.dilate(thresh, kernel_7, iterations=iters) 
-         cv.imwrite(f'{name}_dilation_image_{iters}_count.jpg', dilation_image)
-         cnts,_ = cv.findContours(dilation_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
-
-    #These is a flaw where if there is alot of noise, we have alot of contours and by the time we increase the erosion enough to be at 10 we have mixed the edges of the GU images to lose the contour defining the table outlines. Lets put a cap on iterations to see if that helps
-    
-    # #find the bounding boxes for the contours, select bounding box where area >20% of picture area, and less that < 90% 
-    
-    potential_roi_c = 0
-    roi_info = [] 
-    
-    for c in cnts:
-        x, y, w, h = cv.boundingRect(c)
-        area = w*h
-        if  (.2 * area_original) < area < (.9 * area_original): 
-            potential_roi_c +=1 
-            cv.rectangle(image_with_all_box, (x,y), (x+w,y+h), (0,255,0),2)
-            bbox_centroid = ((x+w)//2 , (y+h)//2)
-            #centroid calculation
-            distance_from_center = np.sqrt((bbox_centroid[0] - centroid[0])**2 +(bbox_centroid[1] - centroid[1])**2)
-            roi_info.append([potential_roi_c, area/area_original,iters, (x,y,w,h), distance_from_center])
-
-    if potential_roi_c > 1:
-        
-        sorted_roi = sorted(roi_info, key= lambda x: x[4])
-        distance_thresh = sorted_roi[0][4]*1.05
-        filtered_roi = []
-        for roi in sorted_roi: #filter by distance from center
-            print(f' distance from center= {roi[4]}, coordinates are x={roi[3][0]} , y = {roi[3][1]}')
-            if roi[4] < distance_thresh:
-                filtered_roi.append(roi)
-        selected_roi = sorted(filtered_roi, key= lambda x: x[1])[0]
-        print(selected_roi)
-    else:
-        selected_roi = roi_info[0]
-        print(selected_roi)
-    cv.rectangle(image_with_selection, (selected_roi[3][0],selected_roi[3][1]), (selected_roi[3][0]+selected_roi[3][2],selected_roi[3][1]+selected_roi[3][3]), (0,255,0),2)
-    
-    cv.imwrite(f'{name}_all_blocks.jpg', image_with_all_box)
-    cv.imwrite(f'{name}_best_blocks.jpg', image_with_selection)
-
-    
-    return selected_roi , roi_info
-
-
 #Dilation and Erosion
 
 #Deskewing  

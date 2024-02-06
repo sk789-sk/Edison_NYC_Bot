@@ -26,14 +26,12 @@ f = open('image_log.txt', 'w+')
 test_im = {0:'gc', 1:'gu'}
 
 
-
-
 for idx, arr in enumerate(image_arr):
     name = test_im[idx]
     for image_path in arr:
         image = cv.imread(image_path)
         descriptor = image_path.split('/')[-1]
-        roi_info =  find_textBlock(image, descriptor)
+        _ ,roi_info =  find_textBlock(image, descriptor)
 
         message = f'Results for Location: {name} File: {descriptor}, Potential_Roi: {roi_info[0]}, Area Percentage= {roi_info[1]*100} , Dilation iterations:{roi_info[2]}'    
         print(message)
