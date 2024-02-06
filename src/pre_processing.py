@@ -88,7 +88,7 @@ def find_textBlock_gu(img):
     pass
 
 
-def find_textBlock(img):
+def find_textBlock_o(img):
 
     #Determine Image Type. If it is primarily Black and White aka GC image what we have right now is fine for extracting
 
@@ -128,6 +128,7 @@ def find_textBlock(img):
         x, y, w, h = cv.boundingRect(c)
         area = w*h
         if  (.2 * area_original) < area < (.9 * area_original): 
+            print(area/area_original)
             cv.rectangle(img, (x,y), (x+w,y+h), (0,255,0),2)
 
     #Use the bounding boxes to define my ROI which is the text block. 
@@ -136,56 +137,101 @@ def find_textBlock(img):
     cv.imwrite('jajaja_textblocks.jpg', img)
     pass   
 
-def invert(path, save_path=save_folder):
-    edit_img = cv.imread(path)
-    inverted_image = cv.bitwise_not(edit_img)
-    cv.imwrite(f'{save_path}/inverted.jpg',inverted_image)
+def find_textBlock(img, name=None):
 
+    #Determine Image Type. If it is primarily Black and White aka GC image what we have right now is fine for extracting
 
-##Black and White
-def grey(img, save_path=save_folder, name='greyscale',date=None):
-    if not date:
-        date = datetime.now().strftime("%m-%d-%Y")
-    grey_img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    cv.imwrite(f'{save_path}/{name}_{date}.jpg', grey_img)
-    return grey_img
+    #GU takes images from computers whch has a few issues. 
+    #HSV value for the blue is 206-100-73 
 
+    #find area of image
 
-#Rescaling
-def resize(img, save_path=save_folder, name='resize',date=None):
-    if not date:
-        date = datetime.now().strftime("%m-%d-%Y")
+    area_original = img.shape[0] * img.shape[1] #wigth*height
+
+    #prepare image for contouring
     
-    #Want to rescale image so it is minimum 300 dpi, not sure how that corresponds with starting with a digital image
+    gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
+    blur = cv.GaussianBlur(gray, (7,7), 0) #Is thisnecessary?
+    _, thresh = cv.threshold(blur, 127, 255, cv.THRESH_BINARY_INV) #tuple 0 is threshold value 1 is the image arr
+    
+    # Erode the Image to combine all the text into chunks not sure how necessary this will be. 
+    kernel_7 = np.ones((7,7))
 
-    resized = cv.resize(img,None,fx=2,fy=2 ,interpolation=cv.INTER_CUBIC ) 
-    cv.imwrite(f'{save_path}/{name}_{date}.jpg', resized)
-    return resized
+    iters = 3
+    
+    dilation_image = cv.dilate(thresh, kernel_7, iterations=iters) 
+    cv.imwrite(f'{name}_dilation_image_{iters}_count.jpg', dilation_image)
+    
+    # #keep iterating until we get a good result?
+    
+    # #Erotion is expanding black areas
+    # #Dilation is expanding white areas areas
 
-##Thresholding and Binarization
 
-def bined(img, save_path=save_folder, name='binarized', date=None):
-    if not date:
-        date = datetime.now().strftime("%m-%d-%Y")    
+    # #Find the contours for initial image
+    cnts,_ = cv.findContours(dilation_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+    # cv.drawContours(img, cnts, -1, (0,255,0), 3) #to visualize atm
+    
+    #if we have to many contours we increase erosion 
+    while len(cnts) >10 and iters <=10:
+         iters +=1
+         dilation_image = cv.dilate(thresh, kernel_7, iterations=iters) 
+         cv.imwrite(f'{name}_dilation_image_{iters}_count.jpg', dilation_image)
+         cnts,_ = cv.findContours(dilation_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
-    grey_img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-    _, bined = cv.threshold(grey_img,127,255,cv.THRESH_BINARY)
-    cv.imwrite(f'{save_path}/{name}_{date}.jpg', bined)
+    #These is a flaw where if there is alot of noise, we have alot of contours and by the time we increase the erosion enough to be at 10 we have mixed the edges of the GU images to lose the contour defining the table outlines. Lets put a cap on iterations to see if that helps
+    
+    # #find the bounding boxes for the contours, select bounding box where area >20% of picture area, and less that < 90% 
+    
+    potential_roi_c = 0
+    roi_info = [None,0,iters]
+    
+    for c in cnts:
+        x, y, w, h = cv.boundingRect(c)
+        area = w*h
+        if  (.2 * area_original) < area < (.9 * area_original): 
+            potential_roi_c +=1 
+            cv.rectangle(img, (x,y), (x+w,y+h), (0,255,0),2)
+            roi_info = [potential_roi_c, area/area_original,iters]
+    
+    # Alt approach
+    # roi_info = [0,0,0]
+    # while True:
+    #     dilation_image = cv.dilate(thresh,kernel_7, iterations=iters)
+    #     cv.imwrite(f'{name}_dilation_image_{iters}_count.jpg', dilation_image)
+    #     cnts,_ = cv.findContours(dilation_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
-#Noise Removal
-
-def denoise(img, save_path=save_folder, name='gauss_blur', date = None):
-    if not date:
-        date = datetime.now().strftime("%m-%d-%Y")   
-    #5x5 Gaussian filter
+    #     potential_roi_c = 0 
         
-    blurred = cv.GaussianBlur(img,(5,5),0)
-    cv.imwrite(f'{save_path}/{name}_{date}.jpg', blurred)
-    return blurred
+    #     for c in cnts:
+    #         x,y,w,h = cv.boundingRect(c)
+    #         area = w*h
+
+    #         if (.2*area_original) < area < (.9*area_original):
+    #             potential_roi_c +=1
+    #             cv.rectangle(img, (x,y), (x+h,y+h), (0,255,0),2)
+            
+    #         if potential_roi_c > 5:
+    #             break
+        
+    #     if potential_roi_c > 5:
+    #         iters +=1
+    #     else:
+    #         roi_info = [potential_roi_c, area/area_original,iters] 
+    #         break
+    
+    cv.imwrite(f'{name}_textblocks.jpg', img)
+    
+    return roi_info
+
 
 #Dilation and Erosion
 
 #Deskewing  
+
+
+
+
 def deskew(img, save_path=save_folder, name='straightened', date = None):
     if not date:
         date = datetime.now().strftime("%m-%d-%Y")   

@@ -1,0 +1,7 @@
+Results for Location: gc File: gc_1_19_raw.jpg, Potential_Roi: 1, Area Percentage= 32.1174496333488 , Dilation iterations:3
+Results for Location: gc File: gc_1_26_raw.jpg, Potential_Roi: 1, Area Percentage= 22.919944121439425 , Dilation iterations:6
+Results for Location: gc File: gc_2_01_24_raw.jpg, Potential_Roi: 2, Area Percentage= 66.33597883597884 , Dilation iterations:4
+Results for Location: gc File: gc_2_02_24_raw.jpg, Potential_Roi: 2, Area Percentage= 62.47484692557565 , Dilation iterations:3
+Results for Location: gu File: gu_1_08_cut_1.jpg, Potential_Roi: 1, Area Percentage= 39.728753649915475 , Dilation iterations:9
+Results for Location: gu File: gu_1_15_raw.jpg, Potential_Roi: 2, Area Percentage= 65.71738263206517 , Dilation iterations:11
+Results for Location: gu File: gu_1_22_raw.jpg, Potential_Roi: 2, Area Percentage= 35.43766271940875 , Dilation iterations:10
