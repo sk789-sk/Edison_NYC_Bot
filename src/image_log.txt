@@ -5,3 +5,5 @@ Results for Location: gc File: gc_2_02_24_raw.jpg, Potential_Roi: 2, Area Percen
 Results for Location: gu File: gu_1_08_cut_1.jpg, Potential_Roi: 1, Area Percentage= 39.728753649915475 , Dilation iterations:9
 Results for Location: gu File: gu_1_15_raw.jpg, Potential_Roi: 2, Area Percentage= 65.71738263206517 , Dilation iterations:11
 Results for Location: gu File: gu_1_22_raw.jpg, Potential_Roi: 2, Area Percentage= 35.43766271940875 , Dilation iterations:10
+Results for Location: gu File: gu_1-29_raw.jpg, Potential_Roi: 1, Area Percentage= 24.32610052122701 , Dilation iterations:9
+Results for Location: gu File: gu_2_05_raw.jpg, Potential_Roi: 3, Area Percentage= 36.235119047619044 , Dilation iterations:10
