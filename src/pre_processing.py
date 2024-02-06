@@ -83,11 +83,6 @@ def all_text_black(img):
     #             if dist >0:
     #                 print('got a hit')
 
-def find_textBlock_gu(img):
-    #initial gaussian blur 5x5 to get the contour == for the atable of interest
-    pass
-
-
 def find_textBlock_o(img):
 
     #Determine Image Type. If it is primarily Black and White aka GC image what we have right now is fine for extracting
@@ -147,8 +142,13 @@ def find_textBlock(img, name=None):
     #find area of image
 
     area_original = img.shape[0] * img.shape[1] #wigth*height
-
+    centroid = (img.shape[0]//2 , img.shape[1]//2)
     #prepare image for contouring
+
+    image_with_all_box = img.copy()
+    image_with_selection = img.copy()
+    
+
     
     gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
     blur = cv.GaussianBlur(gray, (7,7), 0) #Is thisnecessary?
@@ -184,45 +184,40 @@ def find_textBlock(img, name=None):
     # #find the bounding boxes for the contours, select bounding box where area >20% of picture area, and less that < 90% 
     
     potential_roi_c = 0
-    roi_info = [None,0,iters]
+    roi_info = [] 
     
     for c in cnts:
         x, y, w, h = cv.boundingRect(c)
         area = w*h
         if  (.2 * area_original) < area < (.9 * area_original): 
             potential_roi_c +=1 
-            cv.rectangle(img, (x,y), (x+w,y+h), (0,255,0),2)
-            roi_info = [potential_roi_c, area/area_original,iters]
-    
-    # Alt approach
-    # roi_info = [0,0,0]
-    # while True:
-    #     dilation_image = cv.dilate(thresh,kernel_7, iterations=iters)
-    #     cv.imwrite(f'{name}_dilation_image_{iters}_count.jpg', dilation_image)
-    #     cnts,_ = cv.findContours(dilation_image, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+            cv.rectangle(image_with_all_box, (x,y), (x+w,y+h), (0,255,0),2)
+            bbox_centroid = ((x+w)//2 , (y+h)//2)
+            #centroid calculation
+            distance_from_center = np.sqrt((bbox_centroid[0] - centroid[0])**2 +(bbox_centroid[1] - centroid[1])**2)
+            roi_info.append([potential_roi_c, area/area_original,iters, (x,y,w,h), distance_from_center])
 
-    #     potential_roi_c = 0 
+    if potential_roi_c > 1:
         
-    #     for c in cnts:
-    #         x,y,w,h = cv.boundingRect(c)
-    #         area = w*h
+        sorted_roi = sorted(roi_info, key= lambda x: x[4])
+        distance_thresh = sorted_roi[0][4]*1.05
+        filtered_roi = []
+        for roi in sorted_roi: #filter by distance from center
+            print(f' distance from center= {roi[4]}, coordinates are x={roi[3][0]} , y = {roi[3][1]}')
+            if roi[4] < distance_thresh:
+                filtered_roi.append(roi)
+        selected_roi = sorted(filtered_roi, key= lambda x: x[1])[0]
+        print(selected_roi)
+    else:
+        selected_roi = roi_info[0]
+        print(selected_roi)
+    cv.rectangle(image_with_selection, (selected_roi[3][0],selected_roi[3][1]), (selected_roi[3][0]+selected_roi[3][2],selected_roi[3][1]+selected_roi[3][3]), (0,255,0),2)
+    
+    cv.imwrite(f'{name}_all_blocks.jpg', image_with_all_box)
+    cv.imwrite(f'{name}_best_blocks.jpg', image_with_selection)
 
-    #         if (.2*area_original) < area < (.9*area_original):
-    #             potential_roi_c +=1
-    #             cv.rectangle(img, (x,y), (x+h,y+h), (0,255,0),2)
-            
-    #         if potential_roi_c > 5:
-    #             break
-        
-    #     if potential_roi_c > 5:
-    #         iters +=1
-    #     else:
-    #         roi_info = [potential_roi_c, area/area_original,iters] 
-    #         break
     
-    cv.imwrite(f'{name}_textblocks.jpg', img)
-    
-    return roi_info
+    return selected_roi , roi_info
 
 
 #Dilation and Erosion
@@ -241,40 +236,8 @@ def deskew(img, save_path=save_folder, name='straightened', date = None):
     #We then use these lines to find the angle that the image needs to be rotated
     #We perform the rotation and save the new image.
         
-    grey_img = grey(img)
-    edges = cv.Canny(grey_img, 100 , 100, apertureSize=3)    
-
-    plt.subplot(121),plt.imshow(img,cmap = 'gray')
-    plt.title('Original Image'), plt.xticks([]), plt.yticks([])
-    plt.subplot(122),plt.imshow(edges,cmap = 'gray')
-    plt.title('Edge Image'), plt.xticks([]), plt.yticks([])
-
-    lines = cv.HoughLines(edges,1,np.pi/180,200)
-
-    for line in lines:
-        rho,theta = line[0]
-        a = np.cos(theta)
-        b = np.sin(theta)
-        x0 = a*rho
-        y0 = b*rho
-
-        x1 = int(x0 + 1000*(-b))
-        y1 = int(y0 + 1000*(a))
-        x2 = int(x0 - 1000*(-b))
-        y2 = int(y0 - 1000*(a))         
-        cv.line(img,(x1,y1),(x2,y2),(0,0,255),2)
 
     cv.imwrite(f'{save_path}/{name}_{date}_lines.jpg', img)
 
-    return edges
+    return 
 
-
-
-
-#Sharpening
-#look into kernals and images
-    
-
-
-#Steps:
-#Background removal is necessary. Crop the image so it is just the table. 
