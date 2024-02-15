@@ -7,55 +7,19 @@ from PIL import Image
 import os
 import datetime
 
+from pre_processing import find_textBlock, tune_ROI
+
+
 save_folder = '/home/shams/Development/code/post-grad/Edison-NYC-Bot/NYC_Edison/Processed'
-
-# OCR pipeline
-# Image uploaded to discord. Image taken from discord and saved into  a file on disk and then we open it. 
-# Save original file/have the link saved
-# Transformation applied: Auto-Crop 
-# Pass modified image to tesseract and save it.
-# Same flow as before with dealing with information
-
-#De-blurring is removing high frequency components. akin to low pass filter,
-
-#e and o have 
-
-
-#Running into plenty of scenarios with poor images.
-
-#Need to do some form of pre-processing. 
-# Color to Black and white, then thresholding
-# Cropping
-# Extracting LInes
-
-#Lets test this with just tesseract first
-
-#image inversion and 
-#bitwise(img)
-#adaptive thresholding (Binarization)
-
-#rotation and deskewing
-
-
 save_path = '../NYC_Edison/Processed/'
 
 
 #Pre-Processing Test
 
-test_img_path = '/home/shams/Development/code/post-grad/Edison-NYC-Bot/NYC_Edison/Processed/19_test.jpg'
-edit_img = cv.imread(test_img_path)
-
 def invert(path, save_path='/home/shams/Development/code/post-grad/Edison-NYC-Bot/NYC_Edison/Processed'):
     edit_img = cv.imread(path)
     inverted_image = cv.bitwise_not(edit_img)
     cv.imwrite(f'{save_path}/inverted.jpg',inverted_image)
-
-
-#Inverting Image
-
-# edit_img = cv.imread(f'{save_path}/19_test.jpg')
-# inverted_image = cv.bitwise_not(edit_img)
-# cv.imwrite(f'{save_path}/19_invert.jpg', inverted_image)
 
 ##Black and White
 def resize(img, save_path=save_folder, name='resize',date=None):
@@ -69,35 +33,23 @@ def resize(img, save_path=save_folder, name='resize',date=None):
     return resized
 
 
-##Thresholding and Binarization
-
-# _, bined = cv.threshold(grey_img,127,255,cv.THRESH_BINARY)
-# cv.imwrite(f'{save_path}/19_bin.jpg', bined)
-
-#Noise Removal
-
-#Dilation and Erosion
-
-#Deskewing
-
-#Rescaling
-
-#Sharpening
-#look into kernals and images
-
-
 def pre_process_image(file_path):
     pass
 
 
 def parse_tesseract(file_path):
-    print(file_path)
-    img = Image.open(file_path)
-    ocr_result = pytesseract.image_to_string(img)
+
+    # print(file_path)
+    # img = Image.open(file_path)
+
+    # ocr_result = pytesseract.image_to_string(img)
+    ocr_result = pytesseract.image_to_string(file_path)
     print(ocr_result)
 
     splits = ocr_result.split('\n')
     pattern = r'^(\d+)?\t?(.*?)\s+\((\d+)?\)'
+    pattern = r'^(\d+)?\t?(.*?)\s*\((\d+\s*\d+)?\)'
+
     entrants = []
 
     for line in splits:
@@ -112,8 +64,18 @@ def parse_tesseract(file_path):
     return entrants
 
 
+def get_ocr_results(file_path):
+    #Works well for GC atm not for GU
 
+    img = cv.imread(file_path)
+    selection,_,_ = find_textBlock(img)
+    region = tune_ROI(img,selection)
 
+    #take the region and covert to rgb
+
+    RGB_im = cv.cvtColor(region, cv.COLOR_BGR2RGB)
+    standings_list = parse_tesseract(RGB_im)
+    return standings_list
 
 
 
@@ -165,7 +127,5 @@ def parsetext(text):
 
 if __name__ == "__main__":
     # data = parse_file('test.pkl')
-    path = '/home/shams/Development/code/post-grad/Edison-NYC-Bot/NYC_Edison/gu_test.jpg'
-    parse_tesseract(path)
     print('hehe')
     

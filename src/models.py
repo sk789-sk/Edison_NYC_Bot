@@ -24,7 +24,7 @@ class User(db.Model,SerializerMixin):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String)
     discord_id = db.Column(db.BigInteger)
-    konami_id = db.Column(db.BigInteger)
+    konami_id = db.Column(db.String)
 
     #serializer rules
     serialize_rules = ('-Entrant.user_info',)
@@ -46,3 +46,8 @@ class Entrant(db.Model,SerializerMixin):
     #serializer rules
 
     serialize_rules = ('-tournament_info.Entrant','-user_info.Entrant')
+
+class Formats(db.Model,SerializerMixin):
+    __tablename__ = 'Formats'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String)

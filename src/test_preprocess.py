@@ -31,9 +31,15 @@ for idx, arr in enumerate(image_arr):
     for image_path in arr:
         image = cv.imread(image_path)
         descriptor = image_path.split('/')[-1]
-        _ ,roi_info =  find_textBlock(image, descriptor)
+        selected ,all, iters =  find_textBlock(image, descriptor)
 
-        message = f'Results for Location: {name} File: {descriptor}, Potential_Roi: {roi_info[0]}, Area Percentage= {roi_info[1]*100} , Dilation iterations:{roi_info[2]}'    
+        message = f'Results for Location: {name} File: {descriptor}, Potential_Roi: {len(all)}, Dilation_Iterations: {iters}\n\t\t'    
+        print(message)
+        for val in all:
+            line = f'x= {val.x_coor}  y={val.y_coor}    w={val.width}    h={val.height}    area={val.area}    dist={val.centroid_distance}\n\t\t'
+            print(line)
+            pass
+        # , Area Percentage= {roi_info[1]*100} , Dilation iterations:{roi_info[2]}
         print(message)
         f.write(message + '\n')
 

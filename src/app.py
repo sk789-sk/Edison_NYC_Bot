@@ -55,9 +55,12 @@ def add_Tournament():
     new_Entrants = []
     new_users = []
     failed_entrants = []
+
     for entrant in data['entrants']:
 
-        user = User.query.filter(User.konami_id==int(entrant[2])).first()
+        user = User.query.filter(User.konami_id==str(entrant[2])).first()
+
+        # user = db.session.query(User).filter(func.levenshtein(User.konami_id, entrant[2] <1)).order_by(func.levenshtein(User.konami_id,entrant[2])).first()
  
         if user == None:
 

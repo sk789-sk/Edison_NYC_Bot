@@ -15,6 +15,7 @@ from table2ascii import table2ascii
 from parse_ocr import parsetext , parse_file , parse_tesseract
 from bot_ui_models import dropdownView, NameConverter
 from bot_ui_functions import create_tournament_table, create_user_table , build_query_string
+from app import alias_mapping
 
 load_dotenv()
 
@@ -44,7 +45,9 @@ async def rps(interaction:discord.Interaction):
 
 @client.tree.command(name='upload_standings', description='upload image of final standing \ndate format: mm-dd-year default todays date' )
 async def upload_img_slash(interaction:discord.Interaction, image:discord.Attachment, venue:str, date:str=None):
-
+    if venue.lower() not in alias_mapping:
+        return await interaction.response.send_message('Store not found')
+    
     if date is None:
         date = datetime.now().strftime("%m-%d-%Y")
 
@@ -52,8 +55,8 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
     resolved_attachments = interaction.data.get('resolved').get('attachments')
     first_attachment = next(iter(resolved_attachments.values()), {})
     
-    r = requests.get(first_attachment['url'], timeout=30.0)
 
+    r = requests.get(first_attachment['url'], timeout=30.0)
     if r.ok:
         image = r.content
 
@@ -70,30 +73,25 @@ async def upload_img_slash(interaction:discord.Interaction, image:discord.Attach
         message = 'Error reading uploaded Image'
         return await interaction.response.send_message(message)
 
+
     standing_list = parse_tesseract(file_path)        
-    
+
     data = {
         'date':date,
         'venue' : venue,
         'url' : first_attachment['url'],
         'entrants' : standing_list
-        
     }
 
     r = requests.post('http://127.0.0.1:5557/addTournament', json=data, timeout=30.0)
 
     if r.ok:
         data = r.json()
-        #table = create_tournament_table(data)
-
         header = ['Rank', 'Name', 'Konami ID']
         body = []
-
         for entrant in data:
             body.append([entrant['rank'], entrant['user_info']['name'], entrant['user_info']['konami_id']])
-
         table = table2ascii(header=header,body=body)
-        
         message = f'```Results for tournament at {venue} on {date}\n{table}\n```[Link to Picture of Standing Used to Generate Table](<{first_attachment["url"]}>)'
     elif r.status_code==409:
         message = 'Tournament already submitted'
@@ -196,6 +194,9 @@ async def get_tournament_results(interaction:discord.Interaction, location:str=N
 
         if len(data) ==1:
             t_obj = data[0]
+
+            print(t_obj.keys())
+            print(t_obj['Entrant'])
             host,t_date,url = t_obj['host'], t_obj['date'],t_obj['url'] 
 
             table = create_tournament_table(t_obj)

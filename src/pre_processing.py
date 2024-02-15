@@ -1,26 +1,28 @@
 import cv2 as cv
 import numpy as np
 import pytesseract
+import math
 from PIL import Image
 import os
 from datetime import datetime
 from matplotlib import pyplot as plt
-from parse_ocr import parse_tesseract
+
 
 
 #Classes
 
 
 class ROI():
-    def __init__(self, x,y,w,h,area,centroid) -> None:
+    def __init__(self, x,y,w,h,area,centroid,iterations) -> None:
         self.x_coor = x
         self.y_coor = y
         self.width = w
         self.height = h
         self.area = area #area as a percentage of the original image
         self.centroid_distance = centroid #distance from the center
+        self.iterations = iterations
     def __repr__(self):
-        return f'ROI information'
+        return f'ROI information : x,y,w,h,area: '
 
 
 #Image processing functions here
@@ -81,7 +83,7 @@ def find_textBlock(img, name=None):
             #centroid calculation
             distance_from_center = np.sqrt((bbox_centroid[0] - centroid[0])**2 +(bbox_centroid[1] - centroid[1])**2)
 
-            roi = ROI(x,y,w,h,(area/area_original),distance_from_center)
+            roi = ROI(x,y,w,h,(area/area_original),distance_from_center,iters)
             roi_info.append(roi)
 
             # roi_info.append([potential_roi_c, area/area_original,iters, (x,y,w,h), distance_from_center])
@@ -89,7 +91,7 @@ def find_textBlock(img, name=None):
     if len(roi_info) > 1:
         
         sorted_roi = sorted(roi_info, key= lambda x:x.centroid_distance)
-        distance_thresh = sorted_roi[0].centroid_distance*1.05
+        distance_thresh = sorted_roi[0].centroid_distance*1.08
 
         filtered_roi = []
         for roi in sorted_roi: #filter by distance from center
@@ -98,18 +100,29 @@ def find_textBlock(img, name=None):
             if roi.centroid_distance < distance_thresh: #we dont care about orientation, just euclidian distance
                 filtered_roi.append(roi)
         selected_roi = sorted(filtered_roi, key= lambda x: x.area)[0]
-        print(selected_roi)
     else:
         selected_roi = roi_info[0]
-        print(selected_roi)
 
     cv.rectangle(image_with_selection, (selected_roi.x_coor,selected_roi.y_coor), (selected_roi.x_coor+selected_roi.width , selected_roi.y_coor+selected_roi.height), (0,255,0),2)
     
     cv.imwrite(f'{name}_all_blocks.jpg', image_with_all_box)
     cv.imwrite(f'{name}_selected_block.jpg', image_with_selection)
+    # print(selected_roi)
+    # print(roi_info)
+    # print(iters)
 
-    return selected_roi , roi_info
+    return selected_roi , roi_info , iters
 
+
+#we have found the ROI where we think text is located. Now we enhance the image, this is mainly needed for the GU images and not the GC images. 
+
+def tune_ROI(img,roi_info):
+    # selected_roi , roi_info , iters
+    x,y,w,h = roi_info.x_coor , roi_info.y_coor, roi_info.width , roi_info.height
+
+    region = img[y:y+h, x:x+w]
+    cv.imwrite('cropped_img.jpg', region)
+    return region
 
 
 
@@ -228,7 +241,25 @@ def all_text_black(img):
 
 #Deskewing  
 
+def detectlines(img):
+    
+    gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+    _, binary = cv.threshold(gray, 165, 255, cv.THRESH_BINARY)
+    edges = cv.Canny(binary,160,180)
+    lines = cv.HoughLines(edges, 1, np.pi/180,100,None,0,0)
+    if lines is not None:
+        for i in range(0, len(lines)):
+            rho = lines[i][0][0]
+            theta = lines[i][0][1]
+            a = math.cos(theta)
+            b = math.sin(theta)
+            x0 = a * rho
+            y0 = b * rho
+            pt1 = (int(x0 + 1000*(-b)), int(y0 + 1000*(a)))
+            pt2 = (int(x0 - 1000*(-b)), int(y0 - 1000*(a)))
+            cv.line(edges, pt1, pt2, (255,255,255), 3, cv.LINE_AA)
 
+    cv.imwrite('za.jpg',edges)
 
 
 def deskew(img, save_path=save_folder, name='straightened', date = None):
