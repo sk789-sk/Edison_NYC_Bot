@@ -195,8 +195,6 @@ async def get_tournament_results(interaction:discord.Interaction, location:str=N
         if len(data) ==1:
             t_obj = data[0]
 
-            print(t_obj.keys())
-            print(t_obj['Entrant'])
             host,t_date,url = t_obj['host'], t_obj['date'],t_obj['url'] 
 
             table = create_tournament_table(t_obj)

@@ -10,10 +10,12 @@ def create_tournament_table(t_obj:Tournament):
     sorted_obj = t_obj
     # sorted_obj = sorted(t_obj, key=lambda x: x['Entrant']['rank'])
     table_header = ['Place','Name','Konami ID']
-    
+    entrants = t_obj['Entrant']
+    sorted_entrants = sorted(entrants, key=lambda x: x['rank'])
+    print(sorted_entrants)
     #sort the entrants by rank first
     table_body = [[entrant['rank'],entrant['user_info']["name"],
-    entrant['user_info']["konami_id"]] for entrant in sorted_obj['Entrant']]
+    entrant['user_info']["konami_id"]] for entrant in sorted_entrants]
     table = table2ascii(header=table_header, body=table_body)
     return table
 
