@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload
 from config import app, db
 from models import *
 from math import log2 , floor
+from db_funcs import calculate_points
 
 alias_mapping = {
         'gu' : 'Gaming  Universe',
@@ -123,7 +124,22 @@ def add_Tournament():
         response = make_response({'Error': 'Failed to commit entrants'},500)
     print(f'Failed to create entrants fof {failed_entrants}')
     print(f'Created new Users for {new_users}')
+    return response
 
+
+
+@app.route('/UpdateUserPoints/<int:t_id>' , methods = ['GET'])
+def UpdateUserPoints(t_id):
+    t_obj = Tournament.query.filter(Tournament.id==t_id).first()
+    
+    print(t_obj)
+
+    updated_users = calculate_points(t_obj)
+
+    db.session.add_all(updated_users)
+    db.session.commit()
+
+    response = make_response({},200)
     return response
 
 @app.route('/userResults', methods = ['GET'])

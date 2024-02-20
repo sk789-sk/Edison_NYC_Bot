@@ -1,5 +1,6 @@
 .env
 **/*.jpg
+**/*.txt
 
 /src/__pycache__
 /src/migrations
