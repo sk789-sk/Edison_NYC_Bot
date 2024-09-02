@@ -25,6 +25,8 @@ class User(db.Model,SerializerMixin):
     name = db.Column(db.String)
     discord_id = db.Column(db.BigInteger)
     konami_id = db.Column(db.BigInteger)
+    join_date = db.Column(db.Integer)
+    
 
     #serializer rules
     serialize_rules = ('-Entrant.user_info',)

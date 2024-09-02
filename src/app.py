@@ -32,15 +32,7 @@ def add_Tournament():
     data = request.get_json()
 
     rounds = floor(log2(len(data['entrants'])))+1
-
-    #create the tournaments and get its id.
-
-    #Aliases for venues
-    
-    #lowercase the entry and remove the whitespaces
-
     input = data['venue']
-
     processedVenue = input.lower().replace(" ","")
 
     try:

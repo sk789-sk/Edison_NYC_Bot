@@ -13,25 +13,48 @@ from dotenv import load_dotenv
 from table2ascii import table2ascii
 
 from parse_ocr import parsetext , parse_file
-from bot_ui_models import dropdownView, NameConverter
+from bot_ui_models import dropdownView
 from bot_ui_functions import create_tournament_table, create_user_table , build_query_string
 
 load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True 
+intents.members = True
 
 client = commands.Bot(command_prefix='$',intents=intents ,case_insensitive=True)
 
 @client.event
 async def on_ready():
     print(f'Logged in with {client.user}')
-
     try:
         synched = await client.tree.sync()
         print(f"synched with {len(synched)} commands")
     except Exception as e:
         print(e)
+
+@client.event
+async def on_member_join(member):
+    print(f'{member} has joined')
+    #DM the member asking for a name, can register with konami id as well
+    #Take the response from the DM 
+    try:
+        await member.send("name pls")
+        def check(m):
+            return m.author == member
+        try:
+            response = client.wait_for('message',check=check, timeout=30.0)
+            users_name = response.content
+        except asyncio.TimeoutError:
+            await member.send('gimme name')
+    except: #idk what the error for unable to send a DM is
+        print('no name')
+
+    #Take the name and then use that to create a new user.
+    #Should do some kind of moderation for bs names, or no names.
+    #Maybe for no names give them only view permissions?
+    #Maybe kick people after x time after joining if nothing.
+
 
 @client.tree.command(name='hello')
 async def hello(interaction:discord.Interaction):
@@ -273,6 +296,9 @@ async def get_tournament_results(interaction:discord.Interaction, location:str=N
 
 @client.tree.command(name='info', description='get your konami id, and name you are registered with')
 async def info(interaction:discord.Interaction):
+
     pass
+
+
 
 client.run(os.getenv('Disc_Token'))
