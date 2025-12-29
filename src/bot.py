@@ -12,9 +12,12 @@ from discord.ext import commands
 from dotenv import load_dotenv
 from table2ascii import table2ascii
 
-from parse_ocr import parsetext , parse_file
+# from parse_ocr import parsetext , parse_file
 from bot_ui_models import dropdownView
 from bot_ui_functions import create_tournament_table, create_user_table , build_query_string
+
+from TO.create_tournament.tournamentslashfunctions import *
+
 
 load_dotenv()
 
@@ -300,5 +303,47 @@ async def info(interaction:discord.Interaction):
     pass
 
 
+##Tournament Related Functions we can organize this later it hink
+
+@client.tree.command(name='create_tournament',description='Create a tournament')
+async def createslasht(interaction:discord.Interaction, name:str, game:str):
+    await create_slash(interaction,client,name,game)
+
+@client.tree.command(name='join_tournament', description='Join a tournament')
+async def joinslash(interacation:discord.Interaction):
+    await join_slash(interacation,client)
+
+@client.tree.command(name='start_tournament',description='Start a tournament')
+async def startslash(interaction:discord.Interaction):
+    # await start_slash(interaction,client)
+    await interaction.response.send_message('StartTest')
+
+@client.tree.command(name='report_loss', description='Report a loss')
+async def loss_slash(interaction:discord.Interaction):
+    #await loss_slash(interaction,client)
+    await interaction.response.send_message('LossTest')
+
+@client.tree.command(name='next_round', description='Start the next round')
+async def start_next_roud_slash(interaction:discord.Interaction):
+    # await next_round_slash(interaction,client)
+    await interaction.response.send_message('NextRoundTest')
+
+@client.tree.command(name='end_tournament', description='End a tournament')
+async def endslash(interaction:discord.Interaction):
+    # await end_slash(interaction,client)
+    await interaction.response.send_message('EndTest')
+
+@client.tree.command(name='standings',description='Get the Standings')
+async def standingsSlash(interaction:discord.Interaction):
+    # await standings_slash(interaction,client)
+    await interaction.response.send_message('StandingsTest')
+
+@client.tree.command(name='drop',description='Drop from a tournament')
+async def dropSlash(interaction:discord.Interaction):
+    # await drop_slash(interaction,client)
+
+    await interaction.response.send_message('DropTest')
+
+#drop
 
 client.run(os.getenv('Disc_Token'))
